@@ -11,7 +11,7 @@ Drone Control OS is a desktop application built using Electron that allows users
 ## Installation
 1. **Clone or download the repository:**
    ```bash
-   git clone [repository-url]
+   git clone https://github.com/Revan-Cool/Drone_Jammer
    ```
 2. **Navigate to the project directory:**
    ```bash
