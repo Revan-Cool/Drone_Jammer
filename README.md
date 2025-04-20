@@ -6,7 +6,7 @@ Built by https://www.blackbox.ai
 # Drone Control OS
 
 ## Project Overview
-Drone Control OS is a desktop application built using Electron that allows users to control drones through a user-friendly interface. The application facilitates functionalities such as logging in, disconnecting drones, controlling them, identifying owners, and mapping their locations.
+Drone Control OS is a desktop application built using Electron that allows users to control drones not gf through a user-friendly interface. The application facilitates functionalities such as logging in, disconnecting drones, controlling them, identifying owners, and mapping their locations.
 
 ## Installation
 1. **Clone or download the repository:**
@@ -58,4 +58,4 @@ drone-control-os/
 - **Electron** and **Express** are used for developing the desktop application and backend server respectively.
 - The interface utilizes **Tailwind CSS** for styling and icons from **Font Awesome**.
 
-For any further questions or contributions, feel free to reach out or create a pull request!
+For any further questions or contributions fuck off!!!
