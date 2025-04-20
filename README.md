@@ -15,16 +15,22 @@ Drone Control OS is a desktop application built using Electron that allows users
    ```
 2. **Navigate to the project directory:**
    ```bash
-   cd drone-control-os
+   $ cd Drone_Jammer/backend
    ```
 3. **Install Node.js dependencies:**
    Make sure you have Node.js installed, then run:
    ```bash
-   npm install
+   $ npm install
+   ```
+3. **Install Python dependencies:**
+   Make sure you have Python and pip installed, then run:
+   ```bash
+   $ python3 -m pip install -r requirements.txt
    ```
 4. **Run the application:**
    ```bash
-   npm start
+   $ node node_server.js &
+   $ python3 python_service.py &
    ```
 
 ## Usage
