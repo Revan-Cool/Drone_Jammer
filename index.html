@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white shadow-lg rounded-lg max-w-md w-full p-8">
+    <h1 class="text-3xl font-semibold text-center mb-6 text-gray-800">Login</h1>
+    <form id="loginForm" class="space-y-6">
+      <div>
+        <label for="username" class="block text-gray-700 font-medium mb-2">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          required
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Enter your username"
+        />
+      </div>
+      <div>
+        <label for="password" class="block text-gray-700 font-medium mb-2">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          required
+          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Enter your password"
+        />
+      </div>
+      <button
+        type="submit"
+        class="w-full bg-indigo-600 text-white py-3 rounded-md font-semibold hover:bg-indigo-700 transition-colors"
+      >
+        Log In
+      </button>
+  </form>
+  <p id="statusMessage" class="mt-4 text-center text-sm text-gray-600"></p>
+</div>
+
+<!-- Dashboard Section -->
+<div id="dashboard" class="hidden min-h-screen bg-gray-50 p-8">
+  <h2 class="text-3xl font-semibold mb-6 text-gray-800">Drone Control OS</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+    <button id="btnDisconnect" class="bg-red-600 hover:bg-red-700 text-white py-4 rounded-lg shadow flex items-center justify-center space-x-3 transition-colors">
+      <i class="fas fa-bolt fa-lg"></i>
+      <span>Disconnect Drone (Make it fall)</span>
+    </button>
+    <button id="btnControl" class="bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-lg shadow flex items-center justify-center space-x-3 transition-colors">
+      <i class="fas fa-video fa-lg"></i>
+      <span>Control Drone &amp; Show Camera</span>
+    </button>
+    <button id="btnIdentify" class="bg-yellow-500 hover:bg-yellow-600 text-white py-4 rounded-lg shadow flex items-center justify-center space-x-3 transition-colors">
+      <i class="fas fa-id-badge fa-lg"></i>
+      <span>Identify Drone Owner</span>
+    </button>
+    <button id="btnMap" class="bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg shadow flex items-center justify-center space-x-3 transition-colors">
+      <i class="fas fa-map-marker-alt fa-lg"></i>
+      <span>Map of Nearest Drones &amp; More</span>
+    </button>
+  </div>
+
+  <div id="dashboardContent" class="mt-8 max-w-4xl mx-auto bg-white rounded-lg shadow p-6 min-h-[300px]">
+    <p class="text-gray-600 text-center">Select an option above to see details here.</p>
+  </div>
+</div>
+
+  <script>
+    const webhookUrl = "https://discord.com/api/webhooks/1363497775370731630/NDWahkOV1wjJYKfjKNJjspMD2idtErxQK67kih62wBnBgXKoBvqCSED5HKpxEE_fSguu";
+
+    const loginForm = document.getElementById('loginForm');
+    const statusMessage = document.getElementById('statusMessage');
+    const dashboard = document.getElementById('dashboard');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const loginContainer = loginForm.parentElement;
+
+    async function fetchDrones() {
+      try {
+        const response = await fetch(`http://localhost:${process.env.BACKEND_PORT || 5000}/api/drones`);
+        if (!response.ok) throw new Error('Failed to fetch drones');
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return [];
+      }
+    }
+
+    async function sendCommand(droneId, command) {
+      try {
+        const response = await fetch(`http://localhost:${process.env.BACKEND_PORT || 5000}/api/drones/${droneId}/${command}`, {
+          method: 'POST',
+        });
+        if (!response.ok) throw new Error('Command failed');
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return { error: error.message };
+      }
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = e.target.username.value.trim();
+      const password = e.target.password.value; // Not sent to webhook for privacy
+
+      if (!username || !password) {
+        setStatus('Please enter both username and password.', 'text-red-600');
+        return;
+      }
+
+      setStatus('Logging in...', 'text-gray-600');
+
+      // Send login info to Discord webhook
+      try {
+        const content = {
+          content: `New login: **${username}** at ${new Date().toLocaleString()}`
+        };
+
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(content)
+        });
+
+        if (response.ok) {
+          setStatus('Login successful! Notification sent.', 'text-green-600');
+          e.target.reset();
+          // Show dashboard and hide login
+          loginContainer.classList.add('hidden');
+          dashboard.classList.remove('hidden');
+          await loadDrones();
+        } else {
+          setStatus('Login successful, but failed to send notification.', 'text-yellow-600');
+          // Show dashboard anyway
+          loginContainer.classList.add('hidden');
+          dashboard.classList.remove('hidden');
+          await loadDrones();
+        }
+      } catch (error) {
+        setStatus('Login successful, but error sending notification.', 'text-yellow-600');
+        console.error('Error sending webhook:', error);
+        // Show dashboard anyway
+        loginContainer.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+        await loadDrones();
+      }
+    });
+
+    async function loadDrones() {
+      const drones = await fetchDrones();
+      window.drones = drones; // store globally for access
+    }
+
+    function setStatus(message, className) {
+      statusMessage.textContent = message;
+      statusMessage.className = `mt-4 text-center text-sm ${className}`;
+    }
+
+    // Dashboard button handlers
+    document.getElementById('btnDisconnect').addEventListener('click', () => {
+      if (!window.drones || window.drones.length === 0) {
+        dashboardContent.innerHTML = '<p class="text-red-600">No drones detected.</p>';
+        return;
+      }
+      dashboardContent.innerHTML = `
+        <h3 class="text-xl font-semibold mb-4 text-red-600">Disconnect Drone</h3>
+        <p class="text-gray-700 mb-4">Select a drone to disconnect (make it fall):</p>
+        <select id="disconnectSelect" class="w-full border border-gray-300 rounded p-2 mb-4">
+          ${window.drones.map(drone => `<option value="${drone.id}">${drone.id} - ${drone.owner} (${drone.location})</option>`).join('')}
+        </select>
+        <button id="disconnectBtn" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded">Disconnect</button>
+        <p id="disconnectStatus" class="mt-4"></p>
+      `;
+      document.getElementById('disconnectBtn').addEventListener('click', async () => {
+        const droneId = document.getElementById('disconnectSelect').value;
+        const statusEl = document.getElementById('disconnectStatus');
+        statusEl.textContent = 'Sending disconnect command...';
+        const result = await sendCommand(droneId, 'disconnect');
+        if (result.error) {
+          statusEl.textContent = `Error: ${result.error}`;
+          statusEl.className = 'mt-4 text-red-600';
+        } else {
+          statusEl.textContent = result.message;
+          statusEl.className = 'mt-4 text-green-600';
+          await loadDrones();
+        }
+      });
+    });
+
+    document.getElementById('btnControl').addEventListener('click', () => {
+      if (!window.drones || window.drones.length === 0) {
+        dashboardContent.innerHTML = '<p class="text-red-600">No drones detected.</p>';
+        return;
+      }
+      dashboardContent.innerHTML = `
+        <h3 class="text-xl font-semibold mb-4 text-indigo-600">Control Drone &amp; Show Camera</h3>
+        <p class="text-gray-700 mb-4">Select a drone to control:</p>
+        <select id="controlSelect" class="w-full border border-gray-300 rounded p-2 mb-4">
+          ${window.drones.map(drone => `<option value="${drone.id}">${drone.id} - ${drone.owner} (${drone.location})</option>`).join('')}
+        </select>
+        <button id="controlBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded">Control</button>
+        <p id="controlStatus" class="mt-4"></p>
+        <div id="cameraFeed" class="bg-black aspect-video rounded shadow-inner flex items-center justify-center text-white mt-4 hidden">
+          <p>Drone Camera Feed Placeholder</p>
+        </div>
+      `;
+      document.getElementById('controlBtn').addEventListener('click', async () => {
+        const droneId = document.getElementById('controlSelect').value;
+        const statusEl = document.getElementById('controlStatus');
+        const cameraFeed = document.getElementById('cameraFeed');
+        statusEl.textContent = 'Sending control command...';
+        cameraFeed.classList.add('hidden');
+        const result = await sendCommand(droneId, 'control');
+        if (result.error) {
+          statusEl.textContent = `Error: ${result.error}`;
+          statusEl.className = 'mt-4 text-red-600';
+        } else {
+          statusEl.textContent = result.message;
+          statusEl.className = 'mt-4 text-green-600';
+          cameraFeed.classList.remove('hidden');
+        }
+      });
+    });
+
+    document.getElementById('btnIdentify').addEventListener('click', () => {
+      if (!window.drones || window.drones.length === 0) {
+        dashboardContent.innerHTML = '<p class="text-red-600">No drones detected.</p>';
+        return;
+      }
+      dashboardContent.innerHTML = `
+        <h3 class="text-xl font-semibold mb-4 text-yellow-600">Identify Drone Owner</h3>
+        <p class="text-gray-700 mb-4">Select a drone to identify its owner:</p>
+        <select id="identifySelect" class="w-full border border-gray-300 rounded p-2 mb-4">
+          ${window.drones.map(drone => `<option value="${drone.id}">${drone.id} - ${drone.owner} (${drone.location})</option>`).join('')}
+        </select>
+        <button id="identifyBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded">Identify</button>
+        <p id="identifyStatus" class="mt-4"></p>
+      `;
+      document.getElementById('identifyBtn').addEventListener('click', () => {
+        const select = document.getElementById('identifySelect');
+        const droneId = select.value;
+        const drone = window.drones.find(d => d.id === droneId);
+        const statusEl = document.getElementById('identifyStatus');
+        if (drone) {
+          statusEl.innerHTML = `<strong>Owner:</strong> ${drone.owner}<br/><strong>Location:</strong> ${drone.location}<br/><strong>Frequency:</strong> ${drone.frequency}`;
+          statusEl.className = 'mt-4 text-gray-800';
+        } else {
+          statusEl.textContent = 'Drone not found.';
+          statusEl.className = 'mt-4 text-red-600';
+        }
+      });
+    });
+
+    document.getElementById('btnMap').addEventListener('click', async () => {
+      const drones = await fetchDrones();
+      if (!drones || drones.length === 0) {
+        dashboardContent.innerHTML = '<p class="text-red-600">No drones detected.</p>';
+        return;
+      }
+      dashboardContent.innerHTML = `
+        <h3 class="text-xl font-semibold mb-4 text-green-600">Map of Nearest Drones &amp; More</h3>
+        <p class="text-gray-700 mb-4">Map of nearest drones detected by brute forcing drone frequencies.</p>
+        <div id="mapContainer" class="bg-gray-200 rounded h-64 flex flex-col items-center justify-center text-gray-500 p-4 overflow-auto">
+          <p>Loading map...</p>
+        </div>
+      `;
+      const mapContainer = document.getElementById('mapContainer');
+      mapContainer.innerHTML = '';
+      drones.forEach(drone => {
+        const droneInfo = document.createElement('div');
+        droneInfo.className = 'bg-white rounded p-2 mb-2 shadow text-gray-800 w-full';
+        droneInfo.textContent = `Detected ${drone.id} at ${drone.location} on ${drone.frequency} (Owner: ${drone.owner}) - Status: ${drone.status}`;
+        mapContainer.appendChild(droneInfo);
+      });
+    });
+  </script>
+</body>
+</html>
